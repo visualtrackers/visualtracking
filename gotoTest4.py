@@ -204,10 +204,7 @@ if vehicle.version.vehicle_type == mavutil.mavlink.MAV_TYPE_HEXAROTOR:
 # Wait for pilot before proceeding
 print('Waiting for safety pilot to arm...')
 
-print("Setting parameter to always face north!")
 
-#vehicle.parameters['WP_YAW_BEHAVIOR'] = 0
-print("Parameter set successfully!")
 
 # Wait until safety pilot arms drone
 while not vehicle.armed:
