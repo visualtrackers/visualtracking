@@ -433,8 +433,8 @@ try:
             y_val = 0
 
         
-        x_divs = [frame.shape[0] / 3, (2 * frame.shape[0] / 3)]
-        y_divs = [frame.shape[1] / 3, (2 * frame.shape[1] / 3)]
+        x_divs = [2 * frame.shape[0] / 5, (3 * frame.shape[0] / 5)]
+        y_divs = [frame.shape[1] / 3, (3 * frame.shape[1] / 5)]
 
 
 
