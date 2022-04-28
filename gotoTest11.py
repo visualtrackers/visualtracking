@@ -412,6 +412,7 @@ kb = KBHit()
 
 
 responseWeight = 2
+isInBox4 = True
 
 try:
     while run:
@@ -478,7 +479,10 @@ try:
                 zone = 7
                 print("Now in zone 7")
 
-
+        if (zone != 4):
+            isInBox4 = False
+            
+            
         if (trackerWorking == True):
             print("One second elapsed... issuing a goto command!")
             if(zone == 0):
@@ -498,9 +502,13 @@ try:
                 targetLocation=get_location_metres(currentLocation, 0, -responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 4):
-                currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, 0, 0, TARGET_ALTITUDE)
-                vehicle.simple_goto(targetLocation)
+                if not isInBox4:
+                   isInBox4 = True
+                   currentLocation=vehicle.location.global_relative_frame
+                   targetLocation=get_location_metres(currentLocation, 0, 0, TARGET_ALTITUDE)
+                   vehicle.simple_goto(targetLocation)
+                else:
+                    print("Will do nothing because already in box 4")
             elif(zone == 5):
                 currentLocation=vehicle.location.global_relative_frame
                 targetLocation=get_location_metres(currentLocation, 0, responseWeight, TARGET_ALTITUDE)
