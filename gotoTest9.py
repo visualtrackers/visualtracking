@@ -410,6 +410,9 @@ time.sleep(3)
 
 kb = KBHit()
 
+
+responseWeight = 2
+
 try:
     while run:
         ok, frame = video.read()
@@ -480,19 +483,19 @@ try:
             print("One second elapsed... issuing a goto command!")
             if(zone == 0):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, 3, -3, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, responseWeight, -responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 1):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, 3, 0, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, responseWeight, 0, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 2):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, 3, 3, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, responseWeight, responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 3):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, 0, -3, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, 0, -responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 4):
                 currentLocation=vehicle.location.global_relative_frame
@@ -500,19 +503,19 @@ try:
                 vehicle.simple_goto(targetLocation)
             elif(zone == 5):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, 0, 3, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, 0, responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 6):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, -3, -3, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, -responseWeight, -responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 7):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, -3, 0, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, -responseWeight, 0, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             elif(zone == 8):
                 currentLocation=vehicle.location.global_relative_frame
-                targetLocation=get_location_metres(currentLocation, -3, 3, TARGET_ALTITUDE)
+                targetLocation=get_location_metres(currentLocation, -responseWeight, responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             
                 
