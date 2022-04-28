@@ -408,7 +408,28 @@ target_yaw = 0 #math.degrees(90)
 print("Control begin in three seconds...")
 time.sleep(3)
 
+''' Code from stackoverflow for terminal input:
+    kb = KBHit()
 
+    print('Hit any key, or ESC to exit')
+
+    while True:
+
+        if (kb.kbhit()):
+            c = kb.getch()
+            
+            if ord(c) == 27: # ESC
+                break
+            print(c)
+        print("Will sleep")    
+        time.sleep(3)
+            
+        
+
+    kb.set_normal_term()
+'''
+
+kb = KBHit()
 
 try:
     while run:
@@ -525,38 +546,42 @@ try:
                 vehicle.simple_goto(targetLocation)
                 droneStopped = True
 
-
-        if cv2.waitKey(1) & 0xFF == ord('d'): # press 'd' to begin send attitude adjustment
-            controlVehicle = True
-            print("controlVehicle has been set True")
-
-        if cv2.waitKey(1) & 0xFF == ord('x'): # press 'x' to stop send attitude adjustment
-            controlVehicle = False
-            print("controlVehicle has been set False")
-        
-
-        if cv2.waitKey(1) & 0xFF == ord('s'): # press 's' to inititalize tracker
-            print("Setting a new bounding box!")
-            # Define a bounding box
-            bbox = (250, 175, 100, 100) #changed box size
-            #bbox = (int(x_divs[0]), int(y_divs[0]), int(y_divs[1] - y_divs[0]), int(x_divs[1] - x_divs[0]))
-            # Initialize tracker with bounding box
-            tracker = cv2.TrackerCSRT_create()
-            ok = tracker.init(frame, bbox)
-            trackerWorking = True
-            droneStopped = False
-            controlVehicle = True
-            print("controlVehicle has been set True")
-
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'): # press 'q' to return to lauch!
-            vehicle.mode = VehicleMode("RTL")
-            print("RETURN TO LAUNCH KEY PRESSED!!")  
-
-        if cv2.waitKey(1) & 0xFF == ord('l'): # press 'l' to lose bounding box manually!
-            trackerWorking = False
-            droneStopped = False
-            print("Manually killed the bounding box!!")     
+        if (kb.kbhit()):
+            c = kb.getch()
+            
+            # c has the character read in
+            
+            if (c == 'd'):
+                controlVehicle = True
+                print("controlVehicle has been set True")
+                
+            if (c == 'x'):
+                controlVehicle = False
+                print("controlVehicle has been set False")
+                
+            if (c == 's'):
+                print("Setting a new bounding box!")
+                # Define a bounding box
+                bbox = (250, 175, 100, 100) #changed box size
+                #bbox = (int(x_divs[0]), int(y_divs[0]), int(y_divs[1] - y_divs[0]), int(x_divs[1] - x_divs[0]))
+                # Initialize tracker with bounding box
+                tracker = cv2.TrackerCSRT_create()
+                ok = tracker.init(frame, bbox)
+                trackerWorking = True
+                droneStopped = False
+                controlVehicle = True
+                print("controlVehicle has been set True")
+                
+            if (c == 'q'):
+                vehicle.mode = VehicleMode("RTL")
+                print("RETURN TO LAUNCH KEY PRESSED!!")  
+                
+            if (c == 'l'):
+                trackerWorking = False
+                droneStopped = False
+                print("Manually killed the bounding box!!")     
+            
+            
 
         loopCounter = loopCounter + 1
 
@@ -571,8 +596,11 @@ try:
 except KeyboardInterrupt:
     print('exiting')
     video.release()
+    
     pass
 
+
+kb.set_normal_term() # for terminal input
 
 
 # Then this is Sichitu's code for landing
