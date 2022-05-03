@@ -293,7 +293,6 @@ zone = 4
 
 controlVehicle = False 
 
-#(major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
  
  
 #     # Set up tracker.
@@ -334,13 +333,6 @@ if not video.isOpened():
 # Define an initial bounding box
 bbox = (250, 175, 100, 100) #changed box size
 
-
-# Uncomment the line below to select a different bounding box
-#bbox = cv2.selectROI(frame, False)
-#cv2.destroyAllWindows()
-
-# Initialize tracker with first frame and bounding box
-# ok = tracker.init(frame, bbox)
 
 #############################################################
 
@@ -413,8 +405,9 @@ kb = KBHit()
 
 responseWeight = 2
 
-try:
-    while run:
+ '''main tracking algorithm''' 
+try:       
+    while run:       '''disply video feed on the GCS + the bouding box''' 
         ok, frame = video.read()
         p1 = (int(bbox[0]), int(bbox[1]))
         p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
@@ -437,7 +430,7 @@ try:
         y_divs = [frame.shape[1] / 3, (2 * frame.shape[1] / 3)]
 
 
-
+        #Defines the video zones so we know where the bounding box is on the video feed
         if(x_val > x_divs[1]): # right in x axis
             if(y_val < y_divs[0]):
                 # top right
@@ -478,7 +471,7 @@ try:
                 zone = 7
                 print("Now in zone 7")
 
-
+        #Goto functions that moves the UAV accordingly to maintain the bounding box in the center of the video feed
         if (trackerWorking == True):
             print("One second elapsed... issuing a goto command!")
             if(zone == 0):
@@ -529,11 +522,11 @@ try:
                 droneStopped = True
 
 
-        if cv2.waitKey(1) & 0xFF == ord('d'): # press 'c' to begin send attitude adjustment
+        if cv2.waitKey(1) & 0xFF == ord('d'): # press 'd' to allow self control, UAV will maintain bouding box in the center of video
             controlVehicle = True
             print("controlVehicle has been set True")
 
-        if cv2.waitKey(1) & 0xFF == ord('x'): # press 'c' to stop send attitude adjustment
+        if cv2.waitKey(1) & 0xFF == ord('x'): # press 'x' to stop self control
             controlVehicle = False
             print("controlVehicle has been set False")
         
@@ -561,20 +554,20 @@ try:
 
         loopCounter = loopCounter + 1
 
-        if (kb.kbhit()):
+        if (kb.kbhit()):        #Use input from terminal which is more accurate than cv2.waitKey
                 c = kb.getch()
                 
                 # c has the character read in
                 
-                if (c == 'd'):
+                if (c == 'd'):      # press 'd' to allow self control, UAV will maintain bouding box in the center of video
                     controlVehicle = True
                     print("controlVehicle has been set True")
                     
-                if (c == 'x'):
+                if (c == 'x'):     # press 'x' to stop self control
                     controlVehicle = False
                     print("controlVehicle has been set False")
                     
-                if (c == 's'):
+                if (c == 's'):      # press 's' to inititalize tracker
                     print("Setting a new bounding box!")
                     # Define a bounding box
                     bbox = (250, 175, 100, 100) #changed box size
@@ -587,11 +580,11 @@ try:
                     controlVehicle = True
                     print("controlVehicle has been set True")
                     
-                if (c == 'q'):
+                if (c == 'q'):      # press 'q' to return to lauch!
                     vehicle.mode = VehicleMode("RTL")
                     print("RETURN TO LAUNCH KEY PRESSED!!")  
                     
-                if (c == 'l'):
+                if (c == 'l'):      # press 'l' to lose bounding box manually!
                     trackerWorking = False
                     droneStopped = False
                     print("Manually killed the bounding box!!") 
