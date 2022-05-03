@@ -4,18 +4,30 @@
 """
 Usage:
 1. ssh into the companion computer using the -Y argument:  ssh -Y companionComputer@ipAddress
-2. Install the necessary dependencies (specified in the import list below
+2. Install the necessary dependencies (specified in the import list below)
 3. Run the command: python3 visual_tracker.py --connect <*connection_string>
     example: "python3 visual_tracker.py -- connect :14550"
 
 
-This script connects to the drone and waits until armed. When armed it will takeoff
-to the altitude specified by TARGET_ALTITUDE (set to 8 meters) and then when control is given
-it will start tracking and moving with the object selected
+This script connects to the drone and waits until armed. When armed it will takeoff to the altitude specified by TARGET_ALTITUDE (set to 8 meters) and faces north.
+Then when control is given it will start tracking and moving with the object selected.
 
-Once the drone is in the air
+Once the drone is in the air, a camera feed will start on the computer that is ssh-ed into the companion computer so you can see what the drone is seeing for control.
 
-... This explanation needs more
+You need to line up the object you are trying to track in the center of the frame. Then, you need to press the 's' key. This stands for "start" and it will lock onto the object in the center of the frame and start tracking it around.
+It will also move the drone to follow the object. The way it does this is by dividing the frame up into 9 boxes. If the object is in the center box, it sends a Go-To command to the current location.
+If the object is in the top center box, it sends a Go-TO command a certain number of meters north (specified by the variable responseWeight). If the object is in the top right box of the frame, it will go responseWeight meters north and responseWeight meters east, etc.
+To lose the bounding box, press the 'l' key, which means that you "lost" the object and no longer want it to track it anymore. This also stops the drone.
+To stop the flight, press the 'q' button which "quits" the program, returning the drone to launch, and then ending.
+
+Command Summary:
+    s: get lock on object in center of frame and start moving around tracking that object
+    l: stop tracking the object in the center of the frame and stop the drone moving around
+    d: start moving the drone based on the object already aquired a lock on in 's' (this is depreciated and not necessary)
+    x: stop moving the drone based on object being tracked (this is depreciated and not necssary)
+    q: return to launch and stop the script
+
+
 
 """
 
@@ -39,6 +51,7 @@ import argparse # Necessary for parsing argument (connection string) passed into
 
 #############
 # Functions provided by Dr. Sichitiu in square_off.py:
+
 def get_location_metres(original_location, dNorth, dEast, altitude):
     """
     Returns a LocationGlobal object containing the latitude/longitude `dNorth` and `dEast` metres from the
@@ -100,7 +113,8 @@ def condition_yaw(heading, relative=False):
     # delay to wait until yaw of copter is at desired yaw angle and gimbal is set to appropriate bearing
     time.sleep(3)
 
-
+# End of functions given by Dr. Sichitiu in square_off.py
+###########################
 
 
 #########################
@@ -204,6 +218,52 @@ kb = KBHit() # This initialization is required to read in terminal input
 ######################################
 
 
+
+
+
+
+#############################################################
+# My function definitions:
+
+'''
+This function is called when the code wants to track the next iteration of where the object is.
+It takes in the frame of video that has been read in directly before, calls the tracker to get the new bounding box, then does calculations to see where the center of the bounding box is, and then returns the center coordinates and the bounding box so that the bounding box can be displayed on the livestream
+'''
+def trackFrame(frame):
+      
+    # Call the tracker object so it will return the new bounding box that surrounds where the object is in the frame at the moment this function is called
+    ok, bbox = tracker.update(frame)
+
+    # If the tracker call had no errors and returned a valid bounding box, then handle a tracking success:
+    if ok:
+        # Tracking success
+        
+        trackerWorking = True # This boolean indicates a tracking success to the code
+        
+        # Get the x and y locations of the object in the frame. This is the math to get the center coordinates of the bounding box
+        # The bounding box object is a four number array that holds two coordinate positions: the top left of the box and the bottom right of the box.
+        # Therefore, a bounding box looks like this bbox = [x_top-left, y_top-left, x_bottom-right, y_bottom_right]
+        object_location_x = int((2*bbox[0] + bbox[2]) / 2)  # x value of center of bounding box: top left x plus bottom right x divided by two
+        object_location_y = int((2*bbox[1] + bbox[3]) / 2)  # y value of center of bounding box: top left y plus bottom right y divided by two
+        
+    
+    # If the tracker call had an error, then that means it lost the object, so we need to handle a tracker failure
+    else :
+        # Tracking failure
+        print("Tracking ERROR: Boolean trackerWorking now set false.")
+        trackerWorking = False
+
+
+    return object_location_x, object_location_y, bbox # Return the coordinates of the center of the bounding box, and the bounding box itself so it can be displayed on the screen
+
+
+
+
+###################################################################
+
+
+
+
 # Desired altitude (in meters) to takeoff to
 TARGET_ALTITUDE = 8 # Target altitude is now 15 feet up
 # Portion of TARGET_ALTITUDE at which we will break from takeoff loop
@@ -216,17 +276,21 @@ rcin_4_center = False
 
 
 
+
+###############
+# This is connection code given in square_off.py in order to connect to the drone for control
+
 # Set up option parsing to get connection string and mission plan file
 parser = argparse.ArgumentParser(description='Commands vehicle using vehicle.simple_goto.')
 parser.add_argument('--connect', help="Vehicle connection target string.")
 args = parser.parse_args()
 
-# aquire connection_string
+# Aquire connection_string. This is what is passed in with the parameter '--connect'
 connection_string = args.connect
 
-# Exit if no connection string specified
+# Exit if no connection string specified. If we're not
 if not connection_string:
-    sys.exit('Please specify connection string')
+    sys.exit('Please specify connection string. E.g. if your port number for drone control is 14550:   python3 visual_tracker.py --connect :14550')
 
 # Connect to the Vehicle
 print('Connecting to vehicle on: %s' % connection_string)
@@ -258,22 +322,22 @@ while not vehicle.armed:
 print('Armed...')
 vehicle.mode = VehicleMode("GUIDED")
 
+# End of code that connects and waits for the drone to arm
+######################
 
 
 
 
 ######################
-
 # Now from here and below, the drone has connected, and we are ready to start our own code.
 
 
 # The first step is to read in the video. This starts the feed earlier so it has time to adjust exposure automatically via the webcam
-video = cv2.VideoCapture(0) # for using CAM
+video = cv2.VideoCapture(0) # The number inside this can change depending on which camera feeds you have set up. Usually, external USB webcames are the lowest number 0, but if you get an error try 1, 2, etc.
 
 
 # This section ensure that the joystick is set to the neutral position for at least two seconds and takes off before continuing on with our code.
 if vehicle.version.vehicle_type == mavutil.mavlink.MAV_TYPE_QUADROTOR:
-
     rcin_4_center_once = False
     rcin_4_center_twice = False
     while not rcin_4_center_twice:
@@ -285,9 +349,7 @@ if vehicle.version.vehicle_type == mavutil.mavlink.MAV_TYPE_QUADROTOR:
         else:
             rcin_4_center_once = False
         time.sleep(1)
-    
-    
-    
+
     # Takeoff to short altitude set by TARGET_ALTITUDE at the top of the file
     print("Taking off!")
     vehicle.simple_takeoff(TARGET_ALTITUDE)  # Take off to target altitude
@@ -298,19 +360,23 @@ if vehicle.version.vehicle_type == mavutil.mavlink.MAV_TYPE_QUADROTOR:
             print("About to break out of takoff while loop")
             break
         time.sleep(0.5)
-    # yaw north
+        
+    # Set the yaw to north:
     condition_yaw(0)
     
     
+    
+    
+
+##################
+# Now at this point the drone is in the air and facing north!
 
 
-
-# Put code for what to do once in the air:
 
 """
 Variables
 
-##Set up these values before flying!!!!
+# These variables are necessary for the drone's control
 """
 
 iteration_time = .1 # This is how long the program stalls between iterations of the loop
@@ -359,48 +425,8 @@ if not video.isOpened():
 
 
 
-
-#############################################################
-
-'''
-This function is called when the code wants to track the next iteration of where the object is.
-It takes in the frame of video that has been read in directly before, calls the tracker to get the new bounding box, then does calculations to see where the center of the bounding box is, and then returns the center coordinates and the bounding box so that the bounding box can be displayed on the livestream
-'''
-def trackFrame(frame):
-      
-    # Call the tracker object so it will return the new bounding box that surrounds where the object is in the frame at the moment this function is called
-    ok, bbox = tracker.update(frame)
-
-    # If the tracker call had no errors and returned a valid bounding box, then handle a tracking success:
-    if ok:
-        # Tracking success
-        
-        trackerWorking = True # This boolean indicates a tracking success to the code
-        
-        # Get the x and y locations of the object in the frame. This is the math to get the center coordinates of the bounding box
-        # The bounding box object is a four number array that holds two coordinate positions: the top left of the box and the bottom right of the box.
-        # Therefore, a bounding box looks like this bbox = [x_top-left, y_top-left, x_bottom-right, y_bottom_right]
-        object_location_x = int((2*bbox[0] + bbox[2]) / 2)  # x value of center of bounding box: top left x plus bottom right x divided by two
-        object_location_y = int((2*bbox[1] + bbox[3]) / 2)  # y value of center of bounding box: top left y plus bottom right y divided by two
-        
-    
-    # If the tracker call had an error, then that means it lost the object, so we need to handle a tracker failure
-    else :
-        # Tracking failure
-        print("Tracking ERROR: Boolean trackerWorking now set false.")
-        trackerWorking = False
-
-
-    return object_location_x, object_location_y, bbox # Return the coordinates of the center of the bounding box, and the bounding box itself so it can be displayed on the screen
-
-
-
-
-###################################################################
-
-
 # These three lines just issue a simple Go-To to the current location
-# This ensures that the drone stays in place while it waits 1 second before starting the video feed
+# This ensures that the drone stays in place while it waits 1 second just to ensure that everything is working smoothly
 currentLocation = vehicle.location.global_relative_frame
 targetLocation = get_location_metres(currentLocation, 0, 0, TARGET_ALTITUDE)
 vehicle.simple_goto(targetLocation)
@@ -413,29 +439,40 @@ time.sleep(1)
 
 # This is a try statement that will catch a keyboard interrupt (^c) being pressed on the terminal to stop execution of the program
 try:
+
+    # This is the main while loop that executes until the code is done
     while True:
+    
+        # The first stopo is to read in the video feed from the camera
         ok, frame = video.read()
-        p1 = (int(bbox[0]), int(bbox[1]))
-        p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3]))
-        cv2.rectangle(frame, p1, p2, (0,0,255), 2, 1)
-        cv2.imshow("Tracking", frame)
 
         try:
-            x_val, y_val, bbox = trackFrame(frame)
-            current = [x_val, y_val]
-            print(current)
+            x_val, y_val, bbox = trackFrame(frame)  # Pass in that video frame just read in, and perform the tracking on it to see where the object is!
+            current = [x_val, y_val] # Set the current position variable to these coordinates read in
+            print(current) # Print the coordinates so the GCS can see where the object is in the frame
         
         except:
+            # Handle a tracking error, stop the tracker, and also reset x_val and y_val
             print("Bounding Box not Found!")
             trackerWorking = False
             x_val = 0
             y_val = 0
+            
+        # Then show the bounding box and the frame on the companion computer:
+        p1 = (int(bbox[0]), int(bbox[1])) # Get the top left corner of the bounding box
+        p2 = (int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3])) # Get the bottom right corner of the bounding box
+        cv2.rectangle(frame, p1, p2, (0,0,255), 2, 1) # Add a rectangle on the frame on the companion computer ssh-ed in to show where the bounding box is
+        cv2.imshow("Tracking", frame) # Then show the actual frame read in from the video feed
 
         
-        x_divs = [frame.shape[0] / 3, (2 * frame.shape[0] / 3)]
-        y_divs = [frame.shape[1] / 3, (2 * frame.shape[1] / 3)]
+        # This next portion gets the divisions for dividing the frame up into the nine boxes.
+        # We made them all be equidistant, as making them not at 1/3 and 2/3 but at 2/5 and 3/5 did not work, but you could experiment with other vertical and horizontal divisions
+        x_divs = [frame.shape[0] / 3, (2 * frame.shape[0] / 3)] # Set the two x (vertical) divisions to be 1/3 and 2/3 of the way through the frame
+        y_divs = [frame.shape[1] / 3, (2 * frame.shape[1] / 3)] # Set the two y (horizontal) divisions to be 1/3 and 2/3 of the way through the frame
 
 
+        # Now this next big block of nested if statments is used to figure out which zone the object is in
+        # It is long and tedious, but we wanted it to be this way so we could change the divisions above and still accurately calculate zones.
 
         if(x_val > x_divs[1]): # right in x axis
             if(y_val < y_divs[0]):
@@ -471,15 +508,20 @@ try:
             elif(y_val < y_divs[1]):
                 # middle middle (SAFE ZONE)
                 zone = 4
-                print("Now in zone 4 = no action taken because center frame!!")
+                print("Now in zone 4 - The object is center frame!")
             else:
                 # bottom middle
                 zone = 7
                 print("Now in zone 7")
 
 
+
+
+        # Now this next block takes in the zone calculated above and issues the appropriate go-to command of responseWeight in the correct directions
+        # It only does this if the tracker is working though
         if (trackerWorking == True):
-            print("One second elapsed... issuing a goto command!")
+        
+            print("Issueing go-to command in specific direction....")
             if(zone == 0):
                 currentLocation=vehicle.location.global_relative_frame
                 targetLocation=get_location_metres(currentLocation, responseWeight, -responseWeight, TARGET_ALTITUDE)
@@ -517,7 +559,8 @@ try:
                 targetLocation=get_location_metres(currentLocation, -responseWeight, responseWeight, TARGET_ALTITUDE)
                 vehicle.simple_goto(targetLocation)
             
-                
+            
+        # If the tracker is not working, set that I should stop controlling the vehicle and issue a go-to command to the current location
         else:
             controlVehicle = False
             print("controlVehicle set false!")
@@ -528,37 +571,30 @@ try:
                 droneStopped = True
 
 
-        if cv2.waitKey(1) & 0xFF == ord('d'): # press 'c' to begin send attitude adjustment
-            controlVehicle = True
-            print("controlVehicle has been set True")
-
-        if cv2.waitKey(1) & 0xFF == ord('x'): # press 'c' to stop send attitude adjustment
-            controlVehicle = False
-            print("controlVehicle has been set False")
-        
-
-        if cv2.waitKey(1) & 0xFF == ord('s'): # press 's' to inititalize tracker
-            print("Setting a new bounding box!")
-            # Define a bounding box
-            bbox = (250, 175, 100, 100) #changed box size
-            #bbox = (int(x_divs[0]), int(y_divs[0]), int(y_divs[1] - y_divs[0]), int(x_divs[1] - x_divs[0]))
-            # Initialize tracker with bounding box
-            tracker = cv2.TrackerCSRT_create()
-            ok = tracker.init(frame, bbox)
-            trackerWorking = True
-            droneStopped = False
 
         
+
+        # This function looks redundant to below, and it kind of is
+        # But IT IS VERY NECESSARY because it keeps the openCV window open on the companion computer so you can see the video!
         if cv2.waitKey(1) & 0xFF == ord('q'): # press 'q' to return to lauch!
             vehicle.mode = VehicleMode("RTL")
             print("RETURN TO LAUNCH KEY PRESSED!!")
 
-        if cv2.waitKey(1) & 0xFF == ord('l'): # press 'l' to lose bounding box manually!
-            trackerWorking = False
-            droneStopped = False
-            print("Manually killed the bounding box!!")
 
 
+
+        
+        # Below is where the script checks for input from the terminal.
+        # These are the actions of the keypresses:
+        '''
+        Command Summary:
+            s: get lock on object in center of frame and start moving around tracking that object
+            l: stop tracking the object in the center of the frame and stop the drone moving around
+            d: start moving the drone based on the object already aquired a lock on in 's' (this is depreciated and not necessary)
+            x: stop moving the drone based on object being tracked (this is depreciated and not necssary)
+            q: return to launch and stop the script
+        '''
+        
         if (kb.kbhit()):
                 c = kb.getch()
                 
@@ -576,7 +612,7 @@ try:
                     print("Setting a new bounding box!")
                     # Define a bounding box
                     bbox = (250, 175, 100, 100) #changed box size
-                    #bbox = (int(x_divs[0]), int(y_divs[0]), int(y_divs[1] - y_divs[0]), int(x_divs[1] - x_divs[0]))
+                    
                     # Initialize tracker with bounding box
                     tracker = cv2.TrackerCSRT_create()
                     ok = tracker.init(frame, bbox)
@@ -597,7 +633,13 @@ try:
  
 
             
+        # Now I want to sleep the loop for the iteration time before starting the next loop iteration
+        # This ensures that the loop doesn't execute too fast to keep up with the object
         time.sleep(iteration_time)
+        
+        
+        # End of the while loop
+        ################
 
 
 # This is the
@@ -608,7 +650,8 @@ except KeyboardInterrupt:
 
 
 
-# Then this is Sichitu's code for landing
+
+# Then this is Sichitu's code for landing, which we want to do when our code is done running:
 
 print('Landing')
 if vehicle.version.vehicle_type == mavutil.mavlink.MAV_TYPE_QUADROTOR:
