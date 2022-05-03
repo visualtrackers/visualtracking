@@ -48,9 +48,44 @@ import os
 import argparse # Necessary for parsing argument (connection string) passed into script
 
 
+"""
+Variables
+
+# These variables are necessary for the drone's control
+"""
+
+# Desired altitude (in meters) to takeoff to
+TARGET_ALTITUDE = 8 # Target altitude is now 8 meters up
+
+
+iteration_time = 0.1 # This is how long the program stalls between iterations of the loop
+current = [0, 0]    # This variable holds the coordinates of the center of the bounding box of the object being tracked. It is initialized to zero, zero because the object should be near the center at the start.
+trackerWorking = True # This value is used in order to see whether the tracker is properly working. If the tracker ever has an issue (e.g. loses the bounding box) this value is set to False
+droneStopped = False # This value is used in order to know if the drone is in the stopped position. If this is false and the execution needs to stop the drone, it will stop the drone and set this True
+zone = 4        # This value is used to store which zone the object being tracked is currently in. The zones are numbered from 0-9 from top left to bottom right, so 4 is the center box
+controlVehicle = False # This value is used to tell whether the code should be controlling the drone at any point. If this is set to True, then that means the code will issue Go-To commands
+
+# Define an initial bounding box
+bbox = (250, 175, 100, 100) # This is the size of the bounding box that is placed on the screen to track the object within it when the 'S' key is pressed. It is close to the center of the screen, but not perfect
+ 
+target_yaw = 0 # This sets the angle you want the drone to face. For our code to work it needs to be 0 which equals North, but to change it to another use  target_yaw = math.degrees(90) # This sets yaw to 90 degrees, so East
+responseWeight = 2 # This value is how many meters each of the Go-To commands sent while the code is in control are. It being 2 meters (so the drone would move in increments of 2 meters in each direction) worked best for keeping the object tracking by not moving too fast, but also keeping up with a brisk walking pace of a person being tracked
+
+
+
+
+
 
 #############
-# Functions provided by Dr. Sichitiu in square_off.py:
+# Functions and variables provided by Dr. Sichitiu in square_off.py:
+
+# Portion of TARGET_ALTITUDE at which we will break from takeoff loop
+ALTITUDE_REACH_THRESHOLD = 0.95
+# Maximum distance (in meters) from waypoint at which drone has "reached" waypoint
+# This is used instead of 0 since distanceToWaypoint funciton is not 100% accurate
+WAYPOINT_LIMIT = 1
+# Variable to keep track of if joystick to arm has returned to center
+rcin_4_center = False
 
 def get_location_metres(original_location, dNorth, dEast, altitude):
     """
@@ -264,19 +299,6 @@ def trackFrame(frame):
 
 
 
-# Desired altitude (in meters) to takeoff to
-TARGET_ALTITUDE = 8 # Target altitude is now 15 feet up
-# Portion of TARGET_ALTITUDE at which we will break from takeoff loop
-ALTITUDE_REACH_THRESHOLD = 0.95
-# Maximum distance (in meters) from waypoint at which drone has "reached" waypoint
-# This is used instead of 0 since distanceToWaypoint funciton is not 100% accurate
-WAYPOINT_LIMIT = 1
-# Variable to keep track of if joystick to arm has returned to center
-rcin_4_center = False
-
-
-
-
 ###############
 # This is connection code given in square_off.py in order to connect to the drone for control
 
@@ -373,24 +395,7 @@ if vehicle.version.vehicle_type == mavutil.mavlink.MAV_TYPE_QUADROTOR:
 
 
 
-"""
-Variables
 
-# These variables are necessary for the drone's control
-"""
-
-iteration_time = .1 # This is how long the program stalls between iterations of the loop
-current = [0, 0]    # This variable holds the coordinates of the center of the bounding box of the object being tracked. It is initialized to zero, zero because the object should be near the center at the start.
-trackerWorking = True # This value is used in order to see whether the tracker is properly working. If the tracker ever has an issue (e.g. loses the bounding box) this value is set to False
-droneStopped = False # This value is used in order to know if the drone is in the stopped position. If this is false and the execution needs to stop the drone, it will stop the drone and set this True
-zone = 4        # This value is used to store which zone the object being tracked is currently in. The zones are numbered from 0-9 from top left to bottom right, so 4 is the center box
-controlVehicle = False # This value is used to tell whether the code should be controlling the drone at any point. If this is set to True, then that means the code will issue Go-To commands
-
-# Define an initial bounding box
-bbox = (250, 175, 100, 100) # This is the size of the bounding box that is placed on the screen to track the object within it when the 'S' key is pressed. It is close to the center of the screen, but not perfect
- 
-target_yaw = 0 # This sets the angle you want the drone to face. For our code to work it needs to be 0 which equals North, but to change it to another use  target_yaw = math.degrees(90) # This sets yaw to 90 degrees, so East
-responseWeight = 2 # This value is how many meters each of the Go-To commands sent while the code is in control are. It being 2 meters (so the drone would move in increments of 2 meters in each direction) worked best for keeping the object tracking by not moving too fast, but also keeping up with a brisk walking pace of a person being tracked
  
  
 # Initialize the tracker used for object tracking
